@@ -1,0 +1,42 @@
+.settings-form {
+  max-width: 520px;
+  margin: 24px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  background: #ffffff;
+}
+.settings-form h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.25rem;
+}
+.settings-field {
+  display: flex;
+  flex-direction: column;
+}
+.settings-field label {
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+.settings-field input {
+  padding: 8px 10px;
+  border: 1px solid #cfcfcf;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+.settings-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.settings-error {
+  color: #d9534f;
+  font-size: 0.9rem;
+}
+.settings-success {
+  color: #2f9e44;
+  font-size: 0.95rem;
+}
