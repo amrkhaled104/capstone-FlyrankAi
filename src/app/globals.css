@@ -1,26 +1,102 @@
 @import "tailwindcss";
 
 :root {
+  /* Canvas & Text */
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f172a;
+
+  /* Surfaces & Cards */
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --muted: #f8fafc;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
+
+  /* Primary Brand (Trustworthy Home Services Blue) */
+  --primary: #0284c7;
+  --primary-hover: #0369a1;
+  --primary-foreground: #ffffff;
+
+  /* Secondary Accent (Highlights & Soft Badges) */
+  --accent: #f0f9ff;
+  --accent-foreground: #0369a1;
+
+  /* Status & Urgency Tokens */
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --warning: #d97706;
+  --warning-foreground: #ffffff;
+  --danger: #dc2626;
+  --danger-foreground: #ffffff;
+  --info: #2563eb;
+  --info-foreground: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Canvas & Text */
+    --background: #09090b;
+    --foreground: #f8fafc;
+
+    /* Surfaces & Cards */
+    --card: #121215;
+    --card-foreground: #f8fafc;
+    --muted: #1e1e24;
+    --muted-foreground: #94a3b8;
+    --border: #27272a;
+
+    /* Primary Brand */
+    --primary: #38bdf8;
+    --primary-hover: #0ea5e9;
+    --primary-foreground: #09090b;
+
+    /* Secondary Accent */
+    --accent: #0c4a6e;
+    --accent-foreground: #e0f2fe;
+
+    /* Status & Urgency Tokens */
+    --success: #22c55e;
+    --success-foreground: #09090b;
+    --warning: #f59e0b;
+    --warning-foreground: #09090b;
+    --danger: #ef4444;
+    --danger-foreground: #ffffff;
+    --info: #60a5fa;
+    --info-foreground: #09090b;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #09090b;
-    --foreground: #f4f4f5;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
