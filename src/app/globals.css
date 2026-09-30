@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   /* Canvas & Text */
   --background: #ffffff;
@@ -32,38 +34,36 @@
   --info-foreground: #ffffff;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Canvas & Text */
-    --background: #09090b;
-    --foreground: #f8fafc;
+.dark {
+  /* Canvas & Text */
+  --background: #09090b;
+  --foreground: #f8fafc;
 
-    /* Surfaces & Cards */
-    --card: #121215;
-    --card-foreground: #f8fafc;
-    --muted: #1e1e24;
-    --muted-foreground: #94a3b8;
-    --border: #27272a;
+  /* Surfaces & Cards */
+  --card: #121215;
+  --card-foreground: #f8fafc;
+  --muted: #1e1e24;
+  --muted-foreground: #94a3b8;
+  --border: #27272a;
 
-    /* Primary Brand */
-    --primary: #38bdf8;
-    --primary-hover: #0ea5e9;
-    --primary-foreground: #09090b;
+  /* Primary Brand */
+  --primary: #38bdf8;
+  --primary-hover: #0ea5e9;
+  --primary-foreground: #09090b;
 
-    /* Secondary Accent */
-    --accent: #0c4a6e;
-    --accent-foreground: #e0f2fe;
+  /* Secondary Accent */
+  --accent: #0c4a6e;
+  --accent-foreground: #e0f2fe;
 
-    /* Status & Urgency Tokens */
-    --success: #22c55e;
-    --success-foreground: #09090b;
-    --warning: #f59e0b;
-    --warning-foreground: #09090b;
-    --danger: #ef4444;
-    --danger-foreground: #ffffff;
-    --info: #60a5fa;
-    --info-foreground: #09090b;
-  }
+  /* Status & Urgency Tokens */
+  --success: #22c55e;
+  --success-foreground: #09090b;
+  --warning: #f59e0b;
+  --warning-foreground: #09090b;
+  --danger: #ef4444;
+  --danger-foreground: #ffffff;
+  --info: #60a5fa;
+  --info-foreground: #09090b;
 }
 
 @theme inline {

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import ThemeToggle from './ThemeToggle';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
@@ -117,6 +118,11 @@ export default function Navbar() {
             </button>
           </form>
 
+          {/* Theme Selector */}
+          <div className="hidden sm:flex items-center">
+            <ThemeToggle />
+          </div>
+
           {/* Mobile Hamburger Button */}
           <button
             type="button"
@@ -222,6 +228,10 @@ export default function Navbar() {
               );
             })}
           </nav>
+          <div className="mt-4 flex items-center justify-between border-t border-zinc-200 pt-3 dark:border-zinc-800">
+            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Theme</span>
+            <ThemeToggle />
+          </div>
         </div>
       )}
     </header>
