@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import ChatWidget, { isArabic } from '../ChatWidget';
@@ -186,5 +186,24 @@ describe('ChatWidget Component', () => {
 
     fireEvent.click(stopBtn);
     expect(mockStop).toHaveBeenCalled();
+  });
+
+  it('anchors to bottom during streaming and message updates', async () => {
+    const scrollIntoViewMock = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoViewMock;
+
+    const { rerender } = render(<ChatWidget defaultOpen={true} />);
+
+    mockMessages = [
+      { id: '1', role: 'user', content: 'Testing auto-scroll' },
+      { id: '2', role: 'assistant', content: 'Streaming chunk 1' },
+    ];
+    mockIsLoading = true;
+
+    rerender(<ChatWidget defaultOpen={true} />);
+
+    await waitFor(() => {
+      expect(scrollIntoViewMock).toHaveBeenCalled();
+    });
   });
 });

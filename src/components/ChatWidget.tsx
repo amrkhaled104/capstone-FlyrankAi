@@ -180,19 +180,49 @@ export default function ChatWidget({ defaultOpen = false }: ChatWidgetProps) {
       api: "/api/chat",
     });
 
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const shouldAutoScrollRef = useRef<boolean>(true);
 
-  // Auto-scroll to latest message when messages change or while streaming
+  // Monitor user scroll to avoid hijacking when user scrolls up
+  const handleScroll = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const threshold = 80;
+    const isNearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
+    shouldAutoScrollRef.current = isNearBottom;
+  };
+
+  // Auto-scroll to latest token update and anchor message container to bottom smoothly
   useEffect(() => {
-    if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!isOpen) return;
+
+    if (isLoading) {
+      shouldAutoScrollRef.current = true;
+    }
+
+    if (shouldAutoScrollRef.current) {
+      const frameId = requestAnimationFrame(() => {
+        const container = messagesContainerRef.current;
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+        messagesEndRef.current?.scrollIntoView({
+          behavior: isLoading ? "auto" : "smooth",
+          block: "end",
+        });
+      });
+
+      return () => cancelAnimationFrame(frameId);
     }
   }, [messages, isLoading, isOpen]);
 
   // Focus input when widget opens
   useEffect(() => {
     if (isOpen) {
+      shouldAutoScrollRef.current = true;
       inputRef.current?.focus();
     }
   }, [isOpen]);
@@ -336,10 +366,12 @@ export default function ChatWidget({ defaultOpen = false }: ChatWidgetProps) {
 
           {/* Message History Container */}
           <div
+            ref={messagesContainerRef}
+            onScroll={handleScroll}
             role="log"
             aria-live="polite"
             aria-label="Chat message history"
-            className="flex-1 overflow-y-auto p-4 space-y-3"
+            className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3 overscroll-contain"
           >
             {messages.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center text-center px-2 py-2">
@@ -404,7 +436,7 @@ export default function ChatWidget({ defaultOpen = false }: ChatWidgetProps) {
               </div>
             )}
 
-            <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} aria-hidden="true" className="h-px w-full" />
           </div>
 
           {/* Input Form */}
