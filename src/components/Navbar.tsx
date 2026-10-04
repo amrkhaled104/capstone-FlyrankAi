@@ -9,7 +9,6 @@ const NAV_LINKS = [
   { href: '/', label: 'Home' },
   { href: '/categories/cleaning', label: 'Categories' },
   { href: '/bookings', label: 'Bookings' },
-  { href: '/ai-advisor', label: 'AI Advisor' },
 ];
 
 export default function Navbar() {
