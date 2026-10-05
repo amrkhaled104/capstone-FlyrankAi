@@ -2,15 +2,10 @@
 
 import { useChat } from "@ai-sdk/react";
 import React, { memo, useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 export interface ChatWidgetProps {
-  /**
-   * Whether the chat modal should be open initially.
-   * Useful for testing or deep-linking directly into chat.
-   * @default false
-   */
   defaultOpen?: boolean;
 }
 
@@ -21,12 +16,106 @@ export const SUGGESTED_PROMPTS = [
   "Water heater is making a rumbling noise",
 ];
 
-const ARABIC_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+const REMARK_PLUGINS = [remarkGfm];
+const ARABIC_REGEX =
+  /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
 
 /**
  * Detects whether a string contains Arabic characters for bidirectional text rendering.
  */
 export const isArabic = (text: string): boolean => ARABIC_REGEX.test(text);
+
+/**
+ * Reusable Markdown element styles defined outside component to avoid redundant re-allocations.
+ */
+const MARKDOWN_COMPONENTS: Components = {
+  h1: ({ children }) => (
+    <h1 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 mt-1 mb-1 first:mt-0">
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 mt-1 mb-0.5 first:mt-0">
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 mt-1 mb-0.5 first:mt-0">
+      {children}
+    </h3>
+  ),
+  p: ({ children }) => (
+    <p className="mb-1.5 last:mb-0 leading-relaxed">{children}</p>
+  ),
+  ul: ({ children }) => (
+    <ul className="list-disc list-inside space-y-0.5 my-1 ps-1">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="list-decimal list-inside space-y-0.5 my-1 ps-1">
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+  strong: ({ children }) => (
+    <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
+      {children}
+    </strong>
+  ),
+  em: ({ children }) => <em className="italic">{children}</em>,
+  blockquote: ({ children }) => (
+    <blockquote className="border-l-2 rtl:border-r-2 rtl:border-l-0 border-blue-500 pl-2 rtl:pr-2 rtl:pl-0 italic text-zinc-600 dark:text-zinc-400 my-1">
+      {children}
+    </blockquote>
+  ),
+  code({ className, children, ...props }) {
+    const match = /language-(\w+)/.exec(className || "");
+    const isInline = !match && !String(children).includes("\n");
+    return isInline ? (
+      <code
+        className="rounded bg-zinc-200/80 px-1 py-0.5 font-mono text-[11px] text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
+        {...props}
+      >
+        {children}
+      </code>
+    ) : (
+      <pre
+        dir="ltr"
+        className="overflow-x-auto rounded-lg bg-zinc-900 p-2 text-zinc-100 my-1.5 text-[11px] font-mono dark:bg-black/60 text-left"
+      >
+        <code className={className} {...props}>
+          {children}
+        </code>
+      </pre>
+    );
+  },
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+    >
+      {children}
+    </a>
+  ),
+  table: ({ children }) => (
+    <div className="overflow-x-auto my-1.5">
+      <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800 text-[11px]">
+        {children}
+      </table>
+    </div>
+  ),
+  th: ({ children }) => (
+    <th className="px-2 py-1 text-left rtl:text-right font-semibold text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800/60">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="px-2 py-1 border-t border-zinc-200 dark:border-zinc-800">
+      {children}
+    </td>
+  ),
+};
 
 interface ChatMessageItemProps {
   message: {
@@ -40,14 +129,16 @@ interface ChatMessageItemProps {
  * Memoized message item to prevent re-rendering previously streamed messages
  * during high-frequency token chunks.
  */
-const ChatMessageItem = memo(function ChatMessageItem({ message }: ChatMessageItemProps) {
+const ChatMessageItem = memo(function ChatMessageItem({
+  message,
+}: ChatMessageItemProps) {
   const isUser = message.role === "user";
   const rtl = isArabic(message.content);
 
   return (
     <div
-      className={`flex gap-2.5 ${isUser ? "justify-end" : "justify-start"}`}
-      dir={rtl ? "rtl" : "ltr"}
+      dir="ltr"
+      className={`flex items-start gap-2.5 ${isUser ? "flex-row-reverse" : "flex-row"}`}
     >
       {!isUser && (
         <div
@@ -58,6 +149,7 @@ const ChatMessageItem = memo(function ChatMessageItem({ message }: ChatMessageIt
         </div>
       )}
       <div
+        dir={rtl ? "rtl" : "ltr"}
         className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs sm:text-sm leading-relaxed ${
           isUser
             ? "bg-blue-600 text-white shadow-sm rounded-tr-sm text-left rtl:text-right"
@@ -69,99 +161,8 @@ const ChatMessageItem = memo(function ChatMessageItem({ message }: ChatMessageIt
         ) : (
           <div className="space-y-1.5 text-xs sm:text-sm">
             <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                h1: ({ children }) => (
-                  <h1 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 mt-1 mb-1 first:mt-0">
-                    {children}
-                  </h1>
-                ),
-                h2: ({ children }) => (
-                  <h2 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 mt-1 mb-0.5 first:mt-0">
-                    {children}
-                  </h2>
-                ),
-                h3: ({ children }) => (
-                  <h3 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 mt-1 mb-0.5 first:mt-0">
-                    {children}
-                  </h3>
-                ),
-                p: ({ children }) => (
-                  <p className="mb-1.5 last:mb-0 leading-relaxed">{children}</p>
-                ),
-                ul: ({ children }) => (
-                  <ul className="list-disc list-inside space-y-0.5 my-1 ps-1">
-                    {children}
-                  </ul>
-                ),
-                ol: ({ children }) => (
-                  <ol className="list-decimal list-inside space-y-0.5 my-1 ps-1">
-                    {children}
-                  </ol>
-                ),
-                li: ({ children }) => (
-                  <li className="leading-relaxed">{children}</li>
-                ),
-                strong: ({ children }) => (
-                  <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
-                    {children}
-                  </strong>
-                ),
-                em: ({ children }) => <em className="italic">{children}</em>,
-                blockquote: ({ children }) => (
-                  <blockquote className="border-l-2 rtl:border-r-2 rtl:border-l-0 border-blue-500 pl-2 rtl:pr-2 rtl:pl-0 italic text-zinc-600 dark:text-zinc-400 my-1">
-                    {children}
-                  </blockquote>
-                ),
-                code({ className, children, ...props }) {
-                  const match = /language-(\w+)/.exec(className || "");
-                  const isInline = !match && !String(children).includes("\n");
-                  return isInline ? (
-                    <code
-                      className="rounded bg-zinc-200/80 px-1 py-0.5 font-mono text-[11px] text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
-                      {...props}
-                    >
-                      {children}
-                    </code>
-                  ) : (
-                    <pre
-                      dir="ltr"
-                      className="overflow-x-auto rounded-lg bg-zinc-900 p-2 text-zinc-100 my-1.5 text-[11px] font-mono dark:bg-black/60 text-left"
-                    >
-                      <code className={className} {...props}>
-                        {children}
-                      </code>
-                    </pre>
-                  );
-                },
-                a: ({ href, children }) => (
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 underline hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                  >
-                    {children}
-                  </a>
-                ),
-                table: ({ children }) => (
-                  <div className="overflow-x-auto my-1.5">
-                    <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800 text-[11px]">
-                      {children}
-                    </table>
-                  </div>
-                ),
-                th: ({ children }) => (
-                  <th className="px-2 py-1 text-left rtl:text-right font-semibold text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800/60">
-                    {children}
-                  </th>
-                ),
-                td: ({ children }) => (
-                  <td className="px-2 py-1 border-t border-zinc-200 dark:border-zinc-800">
-                    {children}
-                  </td>
-                ),
-              }}
+              remarkPlugins={REMARK_PLUGINS}
+              components={MARKDOWN_COMPONENTS}
             >
               {message.content}
             </ReactMarkdown>
@@ -183,31 +184,28 @@ export default function ChatWidget({ defaultOpen = false }: ChatWidgetProps) {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const shouldAutoScrollRef = useRef<boolean>(true);
+  const shouldAutoScrollRef = useRef(true);
 
-  // Monitor user scroll to avoid hijacking when user scrolls up
+  // Monitor user scroll position to avoid hijacking view when user scrolls up
   const handleScroll = () => {
     const container = messagesContainerRef.current;
     if (!container) return;
     const threshold = 80;
-    const isNearBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight <= threshold;
-    shouldAutoScrollRef.current = isNearBottom;
+    shouldAutoScrollRef.current =
+      container.scrollHeight - container.scrollTop - container.clientHeight <=
+      threshold;
   };
 
   // Auto-scroll to latest token update and anchor message container to bottom smoothly
   useEffect(() => {
     if (!isOpen) return;
-
-    if (isLoading) {
-      shouldAutoScrollRef.current = true;
-    }
+    if (isLoading) shouldAutoScrollRef.current = true;
 
     if (shouldAutoScrollRef.current) {
       const frameId = requestAnimationFrame(() => {
-        const container = messagesContainerRef.current;
-        if (container) {
-          container.scrollTop = container.scrollHeight;
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop =
+            messagesContainerRef.current.scrollHeight;
         }
         messagesEndRef.current?.scrollIntoView({
           behavior: isLoading ? "auto" : "smooth",
@@ -219,20 +217,14 @@ export default function ChatWidget({ defaultOpen = false }: ChatWidgetProps) {
     }
   }, [messages, isLoading, isOpen]);
 
-  // Focus input when widget opens
+  // Focus input and setup Escape key listener when opened
   useEffect(() => {
-    if (isOpen) {
-      shouldAutoScrollRef.current = true;
-      inputRef.current?.focus();
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+    shouldAutoScrollRef.current = true;
+    inputRef.current?.focus();
 
-  // Close widget on Escape key press
-  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && isOpen) {
-        setIsOpen(false);
-      }
+      if (event.key === "Escape") setIsOpen(false);
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -255,7 +247,9 @@ export default function ChatWidget({ defaultOpen = false }: ChatWidgetProps) {
         onClick={() => setIsOpen((prev) => !prev)}
         aria-expanded={isOpen}
         aria-controls="chat-widget-dialog"
-        aria-label={isOpen ? "Close AI Advisor chat" : "Open AI Service Advisor chat"}
+        aria-label={
+          isOpen ? "Close AI Advisor chat" : "Open AI Service Advisor chat"
+        }
         className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl shadow-blue-600/30 transition-all duration-200 hover:scale-105 hover:bg-blue-700 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:bg-blue-500 dark:shadow-blue-500/25 dark:hover:bg-blue-600 dark:focus-visible:ring-offset-zinc-950"
       >
         {isOpen ? (
@@ -291,7 +285,6 @@ export default function ChatWidget({ defaultOpen = false }: ChatWidgetProps) {
               <path d="M12 10h.01" />
               <path d="M16 10h.01" />
             </svg>
-            {/* Live Status Indicator Pill */}
             <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500 dark:border-zinc-950" />
@@ -395,7 +388,8 @@ export default function ChatWidget({ defaultOpen = false }: ChatWidgetProps) {
                   How can we help with your home today?
                 </h3>
                 <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 max-w-[260px]">
-                  Describe any leak, electrical issue, or heating/cooling problem.
+                  Describe any leak, electrical issue, or heating/cooling
+                  problem.
                 </p>
 
                 {/* Suggested Starter Chips */}
@@ -413,9 +407,7 @@ export default function ChatWidget({ defaultOpen = false }: ChatWidgetProps) {
                 </div>
               </div>
             ) : (
-              messages.map((m) => (
-                <ChatMessageItem key={m.id} message={m} />
-              ))
+              messages.map((m) => <ChatMessageItem key={m.id} message={m} />)
             )}
 
             {/* Streaming/Loading Indicator */}
@@ -436,7 +428,11 @@ export default function ChatWidget({ defaultOpen = false }: ChatWidgetProps) {
               </div>
             )}
 
-            <div ref={messagesEndRef} aria-hidden="true" className="h-px w-full" />
+            <div
+              ref={messagesEndRef}
+              aria-hidden="true"
+              className="h-px w-full"
+            />
           </div>
 
           {/* Input Form */}
