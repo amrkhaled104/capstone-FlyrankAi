@@ -34,10 +34,10 @@ export const AI_CONFIG: AiConfig = {
 
   /**
    * Maximum Tokens:
-   * Capped at 1024 tokens to provide thorough, multi-step troubleshooting instructions
-   * and safety warnings without generating verbose or overwhelming responses.
+   * Expanded to 4096 tokens to allow comprehensive, multi-step troubleshooting instructions,
+   * detailed safety protocols, and formatting without AI response truncation.
    */
-  maxTokens: 1024,
+  maxTokens: 4096,
 
   /**
    * System Prompt:
