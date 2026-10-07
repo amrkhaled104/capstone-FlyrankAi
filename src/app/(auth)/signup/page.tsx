@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import AuthCard from '@/components/auth/AuthCard';
-import SignUpForm from '@/components/auth/SignUpForm';
+import SignUpContainer from '@/components/auth/SignUpContainer';
 
 export const metadata: Metadata = {
   title: 'Sign Up | HomeServices AI',
@@ -25,7 +25,7 @@ export default function SignUpPage() {
         footerLinkText="Sign in"
         footerLinkHref="/login"
       >
-        <SignUpForm />
+        <SignUpContainer />
       </AuthCard>
     </div>
   );

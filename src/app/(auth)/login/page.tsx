@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import AuthCard from '@/components/auth/AuthCard';
-import LoginForm from '@/components/auth/LoginForm';
+import LoginContainer from '@/components/auth/LoginContainer';
 
 export const metadata: Metadata = {
   title: 'Log In | HomeServices AI',
@@ -25,7 +25,7 @@ export default function LoginPage() {
         footerLinkText="Sign up now"
         footerLinkHref="/signup"
       >
-        <LoginForm />
+        <LoginContainer />
       </AuthCard>
     </div>
   );
