@@ -1,10 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
-import { auth, getFirebaseErrorMessage } from '@/lib/firebase';
 import { loginSchema, LoginFormData } from '@/lib/validators/auth.schema';
 
 export interface LoginFormProps {
@@ -14,7 +11,6 @@ export interface LoginFormProps {
 }
 
 export default function LoginForm({ onSubmit, onSuccess }: LoginFormProps) {
-  const router = useRouter();
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
     password: '',
@@ -77,51 +73,15 @@ export default function LoginForm({ onSubmit, onSuccess }: LoginFormProps) {
           setIsSubmitting(false);
           return;
         }
-      } else {
-        // Configure persistence based on "rememberMe" choice
-        if (typeof window !== 'undefined') {
-          try {
-            await setPersistence(
-              auth,
-              validation.data.rememberMe ? browserLocalPersistence : browserSessionPersistence
-            );
-          } catch {
-            // Fallback gracefully if browser storage is constrained
-          }
-        }
-
-        // Firebase Auth: Sign in with email and password
-        await signInWithEmailAndPassword(
-          auth,
-          validation.data.email,
-          validation.data.password
-        );
       }
 
-      setSuccessMessage('Successfully signed in! Redirecting to your dashboard...');
+      setSuccessMessage('Successfully signed in!');
       if (onSuccess) {
         onSuccess();
       }
-
-      // Execute immediate router push and layout refresh
-      router.push('/dashboard');
-      router.refresh();
-
-      // Guaranteed fallback for Next.js App Router route-group layout transitions
-      if (typeof window !== 'undefined') {
-        setTimeout(() => {
-          if (window.location.pathname !== '/dashboard') {
-            window.location.href = '/dashboard';
-          }
-        }, 300);
-      }
     } catch (err: unknown) {
-      console.error('[Firebase Auth] Sign-in error:', err);
-      // Map Firebase error codes to user-friendly messages
-      const firebaseError = err as { code?: string; message?: string };
-      if (firebaseError?.code) {
-        setGeneralError(getFirebaseErrorMessage(firebaseError.code));
-      } else if (err instanceof Error) {
+      console.error('Sign-in error:', err);
+      if (err instanceof Error) {
         setGeneralError(err.message);
       } else {
         setGeneralError('An unexpected authentication error occurred. Please try again.');
