@@ -122,6 +122,22 @@ export default function Navbar() {
             <ThemeToggle />
           </div>
 
+          {/* Auth Links */}
+          <div className="hidden md:flex items-center gap-2">
+            <Link
+              href="/login"
+              className="inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/signup"
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+            >
+              Sign Up
+            </Link>
+          </div>
+
           {/* Mobile Hamburger Button */}
           <button
             type="button"
@@ -227,6 +243,24 @@ export default function Navbar() {
               );
             })}
           </nav>
+          {/* Mobile Auth Actions */}
+          <div className="mt-3 flex flex-col gap-2 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+            <Link
+              href="/login"
+              onClick={() => setMobileMenuOpen(false)}
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-200 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/signup"
+              onClick={() => setMobileMenuOpen(false)}
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+            >
+              Sign Up
+            </Link>
+          </div>
+
           <div className="mt-4 flex items-center justify-between border-t border-zinc-200 pt-3 dark:border-zinc-800">
             <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Theme</span>
             <ThemeToggle />

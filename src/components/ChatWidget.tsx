@@ -303,7 +303,10 @@ export default function ChatWidget({ defaultOpen = false }: ChatWidgetProps) {
           className="fixed bottom-20 right-5 z-50 flex h-[500px] w-[calc(100vw-2.5rem)] max-h-[calc(100vh-6.5rem)] sm:w-96 flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl transition-all dark:border-zinc-800 dark:bg-zinc-950"
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-zinc-200 bg-zinc-50/70 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/50">
+          <div
+            className="flex items-center justify-between border-b 
+          border-zinc-200 bg-zinc-50/70 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/50"
+          >
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm dark:bg-blue-500">
                 <svg

@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import Navbar from '@/components/Navbar';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import ChatWidget from '@/components/ChatWidget';
 import './globals.css';
 
 const geistSans = Geist({
@@ -33,11 +31,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground transition-colors">
-        <ThemeProvider>
-          <Navbar />
-          <div className="flex-1 flex flex-col">{children}</div>
-          <ChatWidget />
-        </ThemeProvider>
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );
