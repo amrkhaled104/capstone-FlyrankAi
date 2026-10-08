@@ -231,6 +231,13 @@ export default function ChatWidget({ defaultOpen = false }: ChatWidgetProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen]);
 
+  // Listen to global open-chat-widget trigger
+  useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener("open-chat-widget", handleOpen);
+    return () => window.removeEventListener("open-chat-widget", handleOpen);
+  }, []);
+
   const handlePromptSelect = (prompt: string) => {
     const syntheticEvent = {
       target: { value: prompt },
