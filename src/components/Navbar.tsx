@@ -7,7 +7,7 @@ import ThemeToggle from './ThemeToggle';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
-  { href: '/categories/cleaning', label: 'Categories' },
+  { href: '/services', label: 'Services' },
   { href: '/bookings', label: 'Bookings' },
 ];
 
@@ -19,8 +19,8 @@ export default function Navbar() {
     if (href === '/') {
       return pathname === '/';
     }
-    if (href.startsWith('/categories')) {
-      return pathname.startsWith('/categories');
+    if (href === '/services') {
+      return pathname.startsWith('/services');
     }
     return pathname.startsWith(href);
   };
