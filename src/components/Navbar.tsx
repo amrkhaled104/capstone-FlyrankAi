@@ -1,8 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { ChevronDown, LayoutDashboard, User, LogOut } from 'lucide-react';
+import { auth } from '@/lib/firebase';
+import { signOutFromFirebase } from '@/lib/auth.service';
 import ThemeToggle from './ThemeToggle';
 
 const NAV_LINKS = [
@@ -11,9 +15,80 @@ const NAV_LINKS = [
   { href: '/bookings', label: 'Bookings' },
 ];
 
+interface AuthUser {
+  displayName: string;
+  email: string;
+}
+
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Authenticated state with Firebase Auth synchronization
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>({
+    displayName: 'Amr',
+    email: 'amr@homeservices.ai',
+  });
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('logged_out');
+        }
+        setCurrentUser({
+          displayName: firebaseUser.displayName || 'Amr',
+          email: firebaseUser.email || 'amr@homeservices.ai',
+        });
+      } else {
+        if (typeof window !== 'undefined' && localStorage.getItem('logged_out') === 'true') {
+          setCurrentUser(null);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('logged_out', 'true');
+      }
+      await signOutFromFirebase();
+      setCurrentUser(null);
+      setProfileDropdownOpen(false);
+      setMobileMenuOpen(false);
+      router.push('/login');
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
+
+  // Close dropdown on outside click or escape key
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setProfileDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
 
   const isActiveLink = (href: string) => {
     if (href === '/') {
@@ -75,7 +150,7 @@ export default function Navbar() {
           </nav>
         </div>
 
-        {/* Search Bar & Mobile Menu Toggle */}
+        {/* Search Bar, Theme Toggle, & Profile Menu */}
         <div className="flex items-center gap-3">
           {/* Search Bar (Visual Placeholder) */}
           <form
@@ -122,21 +197,96 @@ export default function Navbar() {
             <ThemeToggle />
           </div>
 
-          {/* Auth Links */}
-          <div className="hidden md:flex items-center gap-2">
-            <Link
-              href="/login"
-              className="inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/signup"
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-            >
-              Sign Up
-            </Link>
-          </div>
+          {/* User Profile Avatar Dropdown / Auth Links */}
+          {currentUser ? (
+            <div className="relative hidden md:block" ref={dropdownRef}>
+              <button
+                type="button"
+                onClick={() => setProfileDropdownOpen((prev) => !prev)}
+                aria-expanded={profileDropdownOpen}
+                aria-haspopup="true"
+                aria-label="User profile menu"
+                className="flex items-center gap-2 rounded-full p-1 text-zinc-700 transition hover:bg-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white shadow-xs dark:bg-blue-500">
+                  {currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : 'A'}
+                </div>
+                <span className="text-sm font-semibold">
+                  {currentUser.displayName}
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 text-zinc-500 transition-transform duration-200 ${
+                    profileDropdownOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {/* Dropdown Menu */}
+              {profileDropdownOpen && (
+                <div
+                  role="menu"
+                  aria-orientation="vertical"
+                  className="absolute right-0 mt-2 w-52 origin-top-right rounded-2xl border border-zinc-200 bg-white py-2 shadow-xl ring-1 ring-black/5 focus:outline-none dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                  <div className="border-b border-zinc-100 px-4 py-2.5 dark:border-zinc-800">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Signed in as</p>
+                    <p className="truncate text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                      {currentUser.displayName}
+                    </p>
+                  </div>
+
+                  <div className="p-1">
+                    <Link
+                      href="/dashboard"
+                      role="menuitem"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-blue-600 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-blue-400"
+                    >
+                      <LayoutDashboard className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+                      <span>Dashboard</span>
+                    </Link>
+
+                    <Link
+                      href="/profile"
+                      role="menuitem"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-blue-600 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-blue-400"
+                    >
+                      <User className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+                      <span>Profile</span>
+                    </Link>
+                  </div>
+
+                  <div className="border-t border-zinc-100 p-1 dark:border-zinc-800">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="hidden md:flex items-center gap-2">
+              <Link
+                href="/login"
+                className="inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/signup"
+                className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 px-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+              >
+                Sign Up
+              </Link>
+            </div>
+          )}
 
           {/* Mobile Hamburger Button */}
           <button
@@ -223,6 +373,7 @@ export default function Navbar() {
               Search
             </button>
           </form>
+
           <nav aria-label="Mobile Navigation" className="flex flex-col gap-1">
             {NAV_LINKS.map((link) => {
               const active = isActiveLink(link.href);
@@ -243,23 +394,66 @@ export default function Navbar() {
               );
             })}
           </nav>
-          {/* Mobile Auth Actions */}
-          <div className="mt-3 flex flex-col gap-2 pt-3 border-t border-zinc-200 dark:border-zinc-800">
-            <Link
-              href="/login"
-              onClick={() => setMobileMenuOpen(false)}
-              className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-200 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-800"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/signup"
-              onClick={() => setMobileMenuOpen(false)}
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-            >
-              Sign Up
-            </Link>
-          </div>
+
+          {/* Mobile User Profile Section or Auth Links */}
+          {currentUser ? (
+            <div className="mt-3 flex flex-col gap-1 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+              <div className="flex items-center gap-3 px-2 py-1.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white shadow-xs dark:bg-blue-500">
+                  {currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : 'A'}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                    {currentUser.displayName}
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {currentUser.email}
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                <LayoutDashboard className="h-4 w-4 text-zinc-500" />
+                <span>Dashboard</span>
+              </Link>
+              <Link
+                href="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              >
+                <User className="h-4 w-4 text-zinc-500" />
+                <span>Profile</span>
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          ) : (
+            <div className="mt-3 flex flex-col gap-2 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-200 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/signup"
+                onClick={() => setMobileMenuOpen(false)}
+                className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-600 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+              >
+                Sign Up
+              </Link>
+            </div>
+          )}
 
           <div className="mt-4 flex items-center justify-between border-t border-zinc-200 pt-3 dark:border-zinc-800">
             <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Theme</span>
