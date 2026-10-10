@@ -15,6 +15,8 @@ import {
   CheckCircle2,
   Wrench,
   LogOut,
+  Globe,
+  EyeOff,
 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { signOutFromFirebase } from '@/lib/auth.service';
@@ -33,6 +35,7 @@ export default function ProfilePage() {
     yearsOfExperience: '',
     hourlyRate: '',
     bio: '',
+    isPublished: false,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -66,6 +69,7 @@ export default function ProfilePage() {
               yearsOfExperience: userIsProvider ? (data.yearsOfExperience || '') : '',
               hourlyRate: userIsProvider ? (data.hourlyRate || '') : '',
               bio: userIsProvider ? (data.bio || '') : '',
+              isPublished: userIsProvider ? Boolean(data.isPublished) : false,
             });
           } else {
             if (user.displayName) {
@@ -92,6 +96,7 @@ export default function ProfilePage() {
               yearsOfExperience: userIsProvider ? prev.yearsOfExperience : '',
               hourlyRate: userIsProvider ? prev.hourlyRate : '',
               bio: userIsProvider ? prev.bio : '',
+              isPublished: userIsProvider ? Boolean(prev.isPublished) : false,
             }));
           }
         }
@@ -107,6 +112,28 @@ export default function ProfilePage() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setSaveSuccess(false);
+  };
+
+  const handleTogglePublish = async () => {
+    const nextPublished = !formData.isPublished;
+    setFormData((prev) => ({ ...prev, isPublished: nextPublished }));
+    setSaveSuccess(false);
+
+    if (currentUser && isProvider) {
+      try {
+        const docRef = doc(db, 'users', currentUser.uid);
+        await setDoc(
+          docRef,
+          {
+            isPublished: nextPublished,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch (err) {
+        console.error('[Profile] Failed to update publish status:', err);
+      }
+    }
   };
 
   const handleLogout = async () => {
@@ -143,6 +170,7 @@ export default function ProfilePage() {
             hourlyRate: deleteField(),
             yearsOfExperience: deleteField(),
             bio: deleteField(),
+            isPublished: deleteField(),
             updatedAt: serverTimestamp(),
           };
           await setDoc(docRef, customerPayload, { merge: true });
@@ -158,6 +186,7 @@ export default function ProfilePage() {
             yearsOfExperience: formData.yearsOfExperience?.trim() || '',
             hourlyRate: formData.hourlyRate?.trim() || '',
             bio: formData.bio?.trim() || '',
+            isPublished: Boolean(formData.isPublished),
             updatedAt: serverTimestamp(),
           };
           await setDoc(docRef, providerPayload, { merge: true });
@@ -173,6 +202,7 @@ export default function ProfilePage() {
           yearsOfExperience: '',
           hourlyRate: '',
           bio: '',
+          isPublished: false,
         }));
       }
 
@@ -376,6 +406,86 @@ export default function ProfilePage() {
                 <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
                   Public Service Card
                 </span>
+              </div>
+
+              {/* Publication Status Card */}
+              <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3.5">
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${
+                        formData.isPublished
+                          ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400'
+                          : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+                      }`}
+                    >
+                      {formData.isPublished ? (
+                        <Globe className="h-5 w-5" />
+                      ) : (
+                        <EyeOff className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          Directory Visibility (تأكيد الظهور في الخدمات)
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold transition ${
+                            formData.isPublished
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                          }`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              formData.isPublished
+                                ? 'bg-emerald-500 animate-pulse'
+                                : 'bg-amber-500'
+                            }`}
+                          />
+                          <span>{formData.isPublished ? 'Live in Directory' : 'Hidden from Directory'}</span>
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        {formData.isPublished
+                          ? 'Your technician card is publicly discoverable and customers can view your profile and book your services.'
+                          : 'Your profile is currently hidden from search results. Toggle on to start receiving client booking requests.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Toggle Controls */}
+                  <div className="flex items-center gap-3 self-end sm:self-center">
+                    <button
+                      type="button"
+                      onClick={handleTogglePublish}
+                      role="switch"
+                      aria-checked={Boolean(formData.isPublished)}
+                      aria-label="Toggle profile directory publication"
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                        formData.isPublished ? 'bg-emerald-600' : 'bg-zinc-300 dark:bg-zinc-700'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                          formData.isPublished ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleTogglePublish}
+                      className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition shadow-2xs ${
+                        formData.isPublished
+                          ? 'border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700'
+                          : 'bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600'
+                      }`}
+                    >
+                      {formData.isPublished ? 'Unpublish' : 'Publish Profile'}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-3">

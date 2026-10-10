@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import {
   Calendar,
   Clock,
@@ -21,6 +21,8 @@ import {
   History,
   RotateCcw,
   LogOut,
+  Globe,
+  EyeOff,
 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { signOutFromFirebase } from '@/lib/auth.service';
@@ -38,6 +40,9 @@ export default function DashboardPage() {
   const router = useRouter();
   const [role, setRole] = useState<UserRole>('customer');
   const [userName, setUserName] = useState<string>('Amr');
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [isPublished, setIsPublished] = useState<boolean>(false);
+  const [isTogglingPublish, setIsTogglingPublish] = useState<boolean>(false);
 
   // Customer activity state
   const [activeBookings, setActiveBookings] = useState<CustomerBooking[]>(
@@ -60,6 +65,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        setCurrentUser(user);
         if (user.displayName) {
           setUserName(user.displayName.split(' ')[0] || user.displayName);
         }
@@ -70,6 +76,7 @@ export default function DashboardPage() {
             const data = docSnap.data();
             const detectedRole = (data.role as UserRole) || 'customer';
             setRole(detectedRole);
+            setIsPublished(Boolean(data.isPublished));
             if (data.fullName) {
               setUserName(data.fullName.split(' ')[0]);
             }
@@ -89,6 +96,34 @@ export default function DashboardPage() {
 
     return () => unsubscribe();
   }, []);
+
+  const handleTogglePublish = async () => {
+    if (!currentUser) return;
+    setIsTogglingPublish(true);
+    const nextPublished = !isPublished;
+    try {
+      const docRef = doc(db, 'users', currentUser.uid);
+      await setDoc(
+        docRef,
+        {
+          isPublished: nextPublished,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+      setIsPublished(nextPublished);
+      showNotification(
+        nextPublished
+          ? 'Profile published! You are now live in the directory.'
+          : 'Profile hidden. Your card has been temporarily unpublished.'
+      );
+    } catch (err) {
+      console.error('[Dashboard] Failed to toggle publication:', err);
+      showNotification('Failed to update publication status. Please try again.');
+    } finally {
+      setIsTogglingPublish(false);
+    }
+  };
 
   const showNotification = (msg: string) => {
     setNotification(msg);
@@ -206,6 +241,63 @@ export default function DashboardPage() {
             <span>Sign Out</span>
           </button>
         </div>
+
+        {/* Provider Directory Publication Status Banner */}
+        {isProvider && (
+          <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3.5 sm:items-center">
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${
+                  isPublished
+                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400'
+                    : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+                }`}
+              >
+                {isPublished ? <Globe className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                    Public Directory Status
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold transition ${
+                      isPublished
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        isPublished ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+                      }`}
+                    />
+                    <span>{isPublished ? 'Live in Directory' : 'Hidden from Directory'}</span>
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  {isPublished
+                    ? 'Your service card is actively discoverable by customers on the public services pages.'
+                    : 'Your service card is currently private. Click Publish Profile to start receiving new customer bookings.'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={isTogglingPublish}
+              onClick={handleTogglePublish}
+              aria-label={isPublished ? 'Unpublish profile from directory' : 'Publish profile to directory'}
+              className={`self-end sm:self-center rounded-xl px-4 py-2 text-xs font-semibold shadow-2xs transition disabled:opacity-50 ${
+                isPublished
+                  ? 'border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700'
+                  : 'bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600'
+              }`}
+            >
+              {isTogglingPublish ? 'Updating...' : isPublished ? 'Unpublish Profile' : 'Publish Profile'}
+            </button>
+          </div>
+        )}
 
         {/* Dynamic Metric Summary Cards (Strictly role-specific) */}
         <section aria-label="Activity Metrics" className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
