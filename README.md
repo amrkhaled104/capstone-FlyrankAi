@@ -1,11 +1,13 @@
 # Home Services AI
 
 ## Project Brief
+
 Home Services AI is a web platform connecting customers with verified home service professionals. Users can describe home issues to the AI assistant for troubleshooting; if professional help is needed, the platform recommends available technicians. Customers track bookings via their dashboard, while providers manage incoming work and display their services.
 
 ## Core User Flows
 
 ### Customer Flow
+
 1. Sign up or log in as a customer.
 2. Chat with the AI assistant for initial troubleshooting tips and maintenance guidance.
 3. Browse recommended service categories and verified technicians (Plumbing, Electrical, HVAC, Appliance Repair, Deep Cleaning).
@@ -13,6 +15,7 @@ Home Services AI is a web platform connecting customers with verified home servi
 5. Track active appointments and review completed service history in the customer dashboard.
 
 ### Provider Flow
+
 1. Sign up or log in as a service professional.
 2. Configure profile details, including trade category, years of experience, hourly rate, and professional bio.
 3. List trade services and availability in the platform directory.
@@ -21,22 +24,42 @@ Home Services AI is a web platform connecting customers with verified home servi
 ## Architecture Overview
 
 ### Frontend
+
 - Next.js (App Router) for modular page structure and server-side performance.
 - Tailwind CSS for a minimalist, responsive user interface with support for both light and dark modes.
 - Lucide React for lightweight, accessible interface icons.
 
 ### Backend and Database
+
 - Firebase Authentication for secure user registration, login, and persistent session management.
 - Cloud Firestore for role-based data persistence, storing user profiles and activity records.
 - Google Gemini API via the Vercel AI SDK for interactive diagnostic troubleshooting.
 
 ### Routing and State
+
 - Role-based view separation ensuring customers see only customer flows and providers see only provider management tools.
 - Dynamic role detection that automatically loads permissions and data based on the stored Firestore account role.
+
+## AI Integration Explained
+
+- **Purpose:** The LLM is integrated to act as a preliminary diagnostic assistant. Instead of forcing users to immediately book a technician, the AI analyzes user-described home issues and provides step-by-step troubleshooting instructions.
+- **Prompt Structure:** The assistant is instructed to act as a helpful home maintenance expert, keeping answers concise, practical, and safe, while recommending verified platform professionals only when physical intervention is required.
+
+## Testing Evidence
+
+- Unit and component tests implemented to verify role-based rendering and form handling.
+- Test coverage ensures critical user paths (customer vs. provider profile separation) function correctly without state leakage.
+
+## Deployment & Operation
+
+- **Live URL:** [Insert your deployed Vercel/Netlify URL here]
+- **Deployment Checklist:** Verified environment variables (Firebase credentials and AI API keys), tested production build locally (`npm run build`), and confirmed error-safe fallbacks for failed network or auth states.
+- **Rollback Plan:** In case of critical failure, previous stable deployments can be instantly restored via the Vercel dashboard or by redeploying the main branch.
 
 ## Setup and Run Instructions
 
 ### Prerequisites
+
 - Node.js version 18.x or later (version 20+ recommended)
 - npm package manager
 
@@ -61,8 +84,10 @@ npm run start
 ## Known Limitations and Future Improvements
 
 ### Limitations
+
 - Payment gateway integration is currently simulated.
 
 ### Future Improvements
+
 - Add real-time chat notifications between customers and technicians.
 - Implement live status tracking and on-site dispatch updates for active bookings.
