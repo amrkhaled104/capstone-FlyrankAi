@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, deleteField } from 'firebase/firestore';
 import {
   User,
   Mail,
@@ -29,15 +29,17 @@ export default function ProfilePage() {
     phone: '+1 (555) 234-5678',
     address: '742 Evergreen Terrace, Springfield',
     role: 'customer',
-    profession: 'Plumbing Services',
-    yearsOfExperience: '8 years',
-    hourlyRate: '$75/hr',
-    bio: 'Certified specialist providing dependable home diagnostics and emergency repairs with guaranteed satisfaction.',
+    profession: '',
+    yearsOfExperience: '',
+    hourlyRate: '',
+    bio: '',
   });
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+
+  const isProvider = role === 'technician' || (role as string) === 'provider';
 
   // Dynamic role detection from Firebase Auth & Cloud Firestore
   useEffect(() => {
@@ -49,20 +51,22 @@ export default function ProfilePage() {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             const data = docSnap.data();
-            const detectedRole = (data.role as UserRole) || 'customer';
+            const rawRole = String(data.role || 'customer').toLowerCase();
+            const detectedRole: UserRole = rawRole === 'provider' || rawRole === 'technician' ? 'technician' : 'customer';
+            const userIsProvider = detectedRole === 'technician';
             setRole(detectedRole);
-            setFormData((prev) => ({
-              ...prev,
-              fullName: data.fullName || user.displayName || prev.fullName,
-              email: data.email || user.email || prev.email,
-              phone: data.phone || prev.phone,
-              address: data.address || prev.address,
+            setFormData({
+              fullName: data.fullName || user.displayName || 'Amr Khaled',
+              email: data.email || user.email || 'amr@homeservices.ai',
+              phone: data.phone || '',
+              address: data.address || '',
               role: detectedRole,
-              profession: data.profession || prev.profession,
-              yearsOfExperience: data.yearsOfExperience || prev.yearsOfExperience,
-              hourlyRate: data.hourlyRate || prev.hourlyRate,
-              bio: data.bio || prev.bio,
-            }));
+              // Strictly exclude provider fields from form state if customer
+              profession: userIsProvider ? (data.profession || 'Plumbing Services') : '',
+              yearsOfExperience: userIsProvider ? (data.yearsOfExperience || '') : '',
+              hourlyRate: userIsProvider ? (data.hourlyRate || '') : '',
+              bio: userIsProvider ? (data.bio || '') : '',
+            });
           } else {
             if (user.displayName) {
               setFormData((prev) => ({ ...prev, fullName: user.displayName! }));
@@ -76,10 +80,19 @@ export default function ProfilePage() {
         }
       } else {
         if (typeof window !== 'undefined') {
-          const savedRole = localStorage.getItem('user_role') as UserRole | null;
-          if (savedRole) {
-            setRole(savedRole);
-            setFormData((prev) => ({ ...prev, role: savedRole }));
+          const rawSaved = localStorage.getItem('user_role');
+          if (rawSaved) {
+            const normalizedRole: UserRole = rawSaved === 'provider' || rawSaved === 'technician' ? 'technician' : 'customer';
+            const userIsProvider = normalizedRole === 'technician';
+            setRole(normalizedRole);
+            setFormData((prev) => ({
+              ...prev,
+              role: normalizedRole,
+              profession: userIsProvider ? (prev.profession || 'Plumbing Services') : '',
+              yearsOfExperience: userIsProvider ? prev.yearsOfExperience : '',
+              hourlyRate: userIsProvider ? prev.hourlyRate : '',
+              bio: userIsProvider ? prev.bio : '',
+            }));
           }
         }
       }
@@ -116,20 +129,58 @@ export default function ProfilePage() {
     try {
       if (currentUser) {
         const docRef = doc(db, 'users', currentUser.uid);
-        await setDoc(
-          docRef,
-          {
-            ...formData,
-            role,
+
+        if (!isProvider) {
+          // If Role is 'customer': Save only customer fields (fullName, email, phone, address, role)
+          // and explicitly delete/exclude provider-specific fields from Firestore
+          const customerPayload = {
+            fullName: formData.fullName.trim(),
+            email: formData.email.trim(),
+            phone: formData.phone.trim(),
+            address: formData.address.trim(),
+            role: 'customer' as const,
+            profession: deleteField(),
+            hourlyRate: deleteField(),
+            yearsOfExperience: deleteField(),
+            bio: deleteField(),
             updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
+          };
+          await setDoc(docRef, customerPayload, { merge: true });
+        } else {
+          // If Role is 'provider' / 'technician': Save both personal and provider-specific fields
+          const providerPayload = {
+            fullName: formData.fullName.trim(),
+            email: formData.email.trim(),
+            phone: formData.phone.trim(),
+            address: formData.address.trim(),
+            role,
+            profession: formData.profession?.trim() || '',
+            yearsOfExperience: formData.yearsOfExperience?.trim() || '',
+            hourlyRate: formData.hourlyRate?.trim() || '',
+            bio: formData.bio?.trim() || '',
+            updatedAt: serverTimestamp(),
+          };
+          await setDoc(docRef, providerPayload, { merge: true });
+        }
       }
+
+      // Strictly ensure the local form state matches the role condition
+      if (!isProvider) {
+        setFormData((prev) => ({
+          ...prev,
+          role: 'customer',
+          profession: '',
+          yearsOfExperience: '',
+          hourlyRate: '',
+          bio: '',
+        }));
+      }
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('user_role', role);
       }
-      // Brief feedback delay
+
+      // Brief feedback delay for UI transition
       await new Promise((resolve) => setTimeout(resolve, 400));
       setSaveSuccess(true);
     } catch (error) {
@@ -139,8 +190,6 @@ export default function ProfilePage() {
       setIsSaving(false);
     }
   };
-
-  const isProvider = role === 'technician';
 
   return (
     <main className="flex-1 py-10 sm:py-14">
@@ -152,12 +201,12 @@ export default function ProfilePage() {
               <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
                 Account Profile
               </h1>
-              {/* Dynamic Role Badge (determined strictly by user account data) */}
+              {/* Dynamic Role Badge */}
               <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
                 {isProvider ? (
                   <>
                     <Wrench className="h-3 w-3" />
-                    <span>Technician Account</span>
+                    <span>Provider Account</span>
                   </>
                 ) : (
                   <>
@@ -169,8 +218,8 @@ export default function ProfilePage() {
             </div>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               {isProvider
-                ? 'Update your professional credentials and service card details.'
-                : 'Manage your contact details and service delivery address.'}
+                ? 'Update your personal contact info and public service card details.'
+                : 'Manage your personal details and service delivery address.'}
             </p>
           </div>
 
@@ -198,13 +247,20 @@ export default function ProfilePage() {
 
         {/* Profile Form */}
         <form onSubmit={handleSubmit} className="mt-8 space-y-8">
-          {/* Section 1: General Account Identity */}
+          {/* Section 1: Personal Details (Always visible for both Customer & Provider) */}
           <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 sm:p-7">
             <div className="flex items-center gap-2 border-b border-zinc-100 pb-4 dark:border-zinc-800">
               <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                Account Details
-              </h2>
+              <div>
+                <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                  Personal Details
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {isProvider
+                    ? 'Your personal contact information and dispatch address.'
+                    : 'Personal contact details and home maintenance address.'}
+                </p>
+              </div>
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -253,75 +309,56 @@ export default function ProfilePage() {
                   <Mail className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
                 </div>
               </div>
+
+              {/* Phone Number */}
+              <div>
+                <label
+                  htmlFor="phone"
+                  className="block text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300"
+                >
+                  Phone Number
+                </label>
+                <div className="relative mt-2">
+                  <input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3.5 pl-10 text-sm text-zinc-900 shadow-2xs transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-blue-400"
+                    placeholder="+1 (555) 234-5678"
+                  />
+                  <Phone className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
+                </div>
+              </div>
+
+              {/* Address */}
+              <div>
+                <label
+                  htmlFor="address"
+                  className="block text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300"
+                >
+                  Address
+                </label>
+                <div className="relative mt-2">
+                  <input
+                    id="address"
+                    name="address"
+                    type="text"
+                    required
+                    value={formData.address}
+                    onChange={handleChange}
+                    className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3.5 pl-10 text-sm text-zinc-900 shadow-2xs transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-blue-400"
+                    placeholder="Street, City, State"
+                  />
+                  <MapPin className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
+                </div>
+              </div>
             </div>
           </section>
 
-          {/* Section 2: Customer-Specific Fields (Only for Customer) */}
-          {!isProvider && (
-            <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 sm:p-7">
-              <div className="flex items-center gap-2 border-b border-zinc-100 pb-4 dark:border-zinc-800">
-                <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                <div>
-                  <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                    Contact & Location Details
-                  </h2>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Used for technician dispatch, on-site diagnostics, and arrival notifications.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
-                {/* Phone Number */}
-                <div>
-                  <label
-                    htmlFor="phone"
-                    className="block text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300"
-                  >
-                    Phone Number
-                  </label>
-                  <div className="relative mt-2">
-                    <input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      required
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3.5 pl-10 text-sm text-zinc-900 shadow-2xs transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-blue-400"
-                      placeholder="+1 (555) 234-5678"
-                    />
-                    <Phone className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
-                  </div>
-                </div>
-
-                {/* Address */}
-                <div>
-                  <label
-                    htmlFor="address"
-                    className="block text-xs font-semibold uppercase tracking-wider text-zinc-700 dark:text-zinc-300"
-                  >
-                    Address
-                  </label>
-                  <div className="relative mt-2">
-                    <input
-                      id="address"
-                      name="address"
-                      type="text"
-                      required
-                      value={formData.address}
-                      onChange={handleChange}
-                      className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3.5 pl-10 text-sm text-zinc-900 shadow-2xs transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-blue-400"
-                      placeholder="Street, City, State"
-                    />
-                    <MapPin className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Section 3: Provider-Specific Fields (Only for Provider/Technician) */}
+          {/* Section 2: Provider-Specific Fields (Only visible when role is 'provider' or 'technician') */}
           {isProvider && (
             <section className="rounded-2xl border border-blue-200 bg-blue-50/30 p-6 shadow-xs dark:border-blue-900/40 dark:bg-blue-950/20 sm:p-7">
               <div className="flex items-center justify-between border-b border-blue-100 pb-4 dark:border-blue-900/40">

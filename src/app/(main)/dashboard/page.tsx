@@ -142,7 +142,7 @@ export default function DashboardPage() {
     showNotification(`Booking "${target.serviceTitle}" has been cancelled.`);
   };
 
-  const isProvider = role === 'technician';
+  const isProvider = role === 'technician' || (role as string) === 'provider';
 
   return (
     <main className="flex-1 py-8 sm:py-12">
