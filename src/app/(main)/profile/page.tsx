@@ -1,9 +1,15 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp, deleteField } from 'firebase/firestore';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+  deleteField,
+} from "firebase/firestore";
 import {
   User,
   Mail,
@@ -15,31 +21,34 @@ import {
   CheckCircle2,
   Wrench,
   LogOut,
-} from 'lucide-react';
-import { auth, db } from '@/lib/firebase';
-import { signOutFromFirebase } from '@/lib/auth.service';
-import { UserRole, ProfileFormData } from '@/lib/validators/auth.schema';
+  Globe,
+  EyeOff,
+} from "lucide-react";
+import { auth, db } from "@/lib/firebase";
+import { signOutFromFirebase } from "@/lib/auth.service";
+import { UserRole, ProfileFormData } from "@/lib/validators/auth.schema";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [role, setRole] = useState<UserRole>('customer');
+  const [role, setRole] = useState<UserRole>("customer");
   const [formData, setFormData] = useState<ProfileFormData>({
-    fullName: 'Amr Khaled',
-    email: 'amr@homeservices.ai',
-    phone: '+1 (555) 234-5678',
-    address: '742 Evergreen Terrace, Springfield',
-    role: 'customer',
-    profession: '',
-    yearsOfExperience: '',
-    hourlyRate: '',
-    bio: '',
+    fullName: "",
+    email: "",
+    phone: "",
+    address: "",
+    role: "customer",
+    profession: "",
+    yearsOfExperience: "",
+    hourlyRate: "",
+    bio: "",
+    isPublished: false,
   });
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
 
-  const isProvider = role === 'technician' || (role as string) === 'provider';
+  const isProvider = role === "technician" || (role as string) === "provider";
 
   // Dynamic role detection from Firebase Auth & Cloud Firestore
   useEffect(() => {
@@ -47,25 +56,33 @@ export default function ProfilePage() {
       if (user) {
         setCurrentUser(user);
         try {
-          const docRef = doc(db, 'users', user.uid);
+          const docRef = doc(db, "users", user.uid);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             const data = docSnap.data();
-            const rawRole = String(data.role || 'customer').toLowerCase();
-            const detectedRole: UserRole = rawRole === 'provider' || rawRole === 'technician' ? 'technician' : 'customer';
-            const userIsProvider = detectedRole === 'technician';
+            const rawRole = String(data.role || "customer").toLowerCase();
+            const detectedRole: UserRole =
+              rawRole === "provider" || rawRole === "technician"
+                ? "technician"
+                : "customer";
+            const userIsProvider = detectedRole === "technician";
             setRole(detectedRole);
             setFormData({
-              fullName: data.fullName || user.displayName || 'Amr Khaled',
-              email: data.email || user.email || 'amr@homeservices.ai',
-              phone: data.phone || '',
-              address: data.address || '',
+              fullName: data.fullName || user.displayName || "Amr Khaled",
+              email: data.email || user.email || "amr@homeservices.ai",
+              phone: data.phone || "",
+              address: data.address || "",
               role: detectedRole,
               // Strictly exclude provider fields from form state if customer
-              profession: userIsProvider ? (data.profession || 'Plumbing Services') : '',
-              yearsOfExperience: userIsProvider ? (data.yearsOfExperience || '') : '',
-              hourlyRate: userIsProvider ? (data.hourlyRate || '') : '',
-              bio: userIsProvider ? (data.bio || '') : '',
+              profession: userIsProvider
+                ? data.profession || "Plumbing Services"
+                : "",
+              yearsOfExperience: userIsProvider
+                ? data.yearsOfExperience || ""
+                : "",
+              hourlyRate: userIsProvider ? data.hourlyRate || "" : "",
+              bio: userIsProvider ? data.bio || "" : "",
+              isPublished: userIsProvider ? Boolean(data.isPublished) : false,
             });
           } else {
             if (user.displayName) {
@@ -76,22 +93,31 @@ export default function ProfilePage() {
             }
           }
         } catch (err) {
-          console.warn('[Profile] Failed to fetch profile from Firestore:', err);
+          console.warn(
+            "[Profile] Failed to fetch profile from Firestore:",
+            err,
+          );
         }
       } else {
-        if (typeof window !== 'undefined') {
-          const rawSaved = localStorage.getItem('user_role');
+        if (typeof window !== "undefined") {
+          const rawSaved = localStorage.getItem("user_role");
           if (rawSaved) {
-            const normalizedRole: UserRole = rawSaved === 'provider' || rawSaved === 'technician' ? 'technician' : 'customer';
-            const userIsProvider = normalizedRole === 'technician';
+            const normalizedRole: UserRole =
+              rawSaved === "provider" || rawSaved === "technician"
+                ? "technician"
+                : "customer";
+            const userIsProvider = normalizedRole === "technician";
             setRole(normalizedRole);
             setFormData((prev) => ({
               ...prev,
               role: normalizedRole,
-              profession: userIsProvider ? (prev.profession || 'Plumbing Services') : '',
-              yearsOfExperience: userIsProvider ? prev.yearsOfExperience : '',
-              hourlyRate: userIsProvider ? prev.hourlyRate : '',
-              bio: userIsProvider ? prev.bio : '',
+              profession: userIsProvider
+                ? prev.profession || "Plumbing Services"
+                : "",
+              yearsOfExperience: userIsProvider ? prev.yearsOfExperience : "",
+              hourlyRate: userIsProvider ? prev.hourlyRate : "",
+              bio: userIsProvider ? prev.bio : "",
+              isPublished: userIsProvider ? Boolean(prev.isPublished) : false,
             }));
           }
         }
@@ -102,22 +128,46 @@ export default function ProfilePage() {
   }, []);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setSaveSuccess(false);
   };
 
+  const handleTogglePublish = async () => {
+    const nextPublished = !formData.isPublished;
+    setFormData((prev) => ({ ...prev, isPublished: nextPublished }));
+    setSaveSuccess(false);
+
+    if (currentUser && isProvider) {
+      try {
+        const docRef = doc(db, "users", currentUser.uid);
+        await setDoc(
+          docRef,
+          {
+            isPublished: nextPublished,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
+      } catch (err) {
+        console.error("[Profile] Failed to update publish status:", err);
+      }
+    }
+  };
+
   const handleLogout = async () => {
     try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('logged_out', 'true');
+      if (typeof window !== "undefined") {
+        localStorage.setItem("logged_out", "true");
       }
       await signOutFromFirebase();
-      router.push('/login');
+      router.push("/login");
     } catch (error) {
-      console.error('[Profile] Sign out failed:', error);
+      console.error("[Profile] Sign out failed:", error);
     }
   };
 
@@ -128,7 +178,7 @@ export default function ProfilePage() {
 
     try {
       if (currentUser) {
-        const docRef = doc(db, 'users', currentUser.uid);
+        const docRef = doc(db, "users", currentUser.uid);
 
         if (!isProvider) {
           // If Role is 'customer': Save only customer fields (fullName, email, phone, address, role)
@@ -138,11 +188,12 @@ export default function ProfilePage() {
             email: formData.email.trim(),
             phone: formData.phone.trim(),
             address: formData.address.trim(),
-            role: 'customer' as const,
+            role: "customer" as const,
             profession: deleteField(),
             hourlyRate: deleteField(),
             yearsOfExperience: deleteField(),
             bio: deleteField(),
+            isPublished: deleteField(),
             updatedAt: serverTimestamp(),
           };
           await setDoc(docRef, customerPayload, { merge: true });
@@ -154,10 +205,11 @@ export default function ProfilePage() {
             phone: formData.phone.trim(),
             address: formData.address.trim(),
             role,
-            profession: formData.profession?.trim() || '',
-            yearsOfExperience: formData.yearsOfExperience?.trim() || '',
-            hourlyRate: formData.hourlyRate?.trim() || '',
-            bio: formData.bio?.trim() || '',
+            profession: formData.profession?.trim() || "",
+            yearsOfExperience: formData.yearsOfExperience?.trim() || "",
+            hourlyRate: formData.hourlyRate?.trim() || "",
+            bio: formData.bio?.trim() || "",
+            isPublished: Boolean(formData.isPublished),
             updatedAt: serverTimestamp(),
           };
           await setDoc(docRef, providerPayload, { merge: true });
@@ -168,23 +220,24 @@ export default function ProfilePage() {
       if (!isProvider) {
         setFormData((prev) => ({
           ...prev,
-          role: 'customer',
-          profession: '',
-          yearsOfExperience: '',
-          hourlyRate: '',
-          bio: '',
+          role: "customer",
+          profession: "",
+          yearsOfExperience: "",
+          hourlyRate: "",
+          bio: "",
+          isPublished: false,
         }));
       }
 
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('user_role', role);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("user_role", role);
       }
 
       // Brief feedback delay for UI transition
       await new Promise((resolve) => setTimeout(resolve, 400));
       setSaveSuccess(true);
     } catch (error) {
-      console.error('[Profile] Failed to save profile:', error);
+      console.error("[Profile] Failed to save profile:", error);
       setSaveSuccess(true);
     } finally {
       setIsSaving(false);
@@ -218,8 +271,8 @@ export default function ProfilePage() {
             </div>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               {isProvider
-                ? 'Update your personal contact info and public service card details.'
-                : 'Manage your personal details and service delivery address.'}
+                ? "Update your personal contact info and public service card details."
+                : "Manage your personal details and service delivery address."}
             </p>
           </div>
 
@@ -257,8 +310,8 @@ export default function ProfilePage() {
                 </h2>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   {isProvider
-                    ? 'Your personal contact information and dispatch address.'
-                    : 'Personal contact details and home maintenance address.'}
+                    ? "Your personal contact information and dispatch address."
+                    : "Personal contact details and home maintenance address."}
                 </p>
               </div>
             </div>
@@ -281,7 +334,7 @@ export default function ProfilePage() {
                     value={formData.fullName}
                     onChange={handleChange}
                     className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3.5 pl-10 text-sm text-zinc-900 shadow-2xs transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-blue-400"
-                    placeholder="Amr Khaled"
+                    placeholder="Your Full Name"
                   />
                   <User className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
                 </div>
@@ -304,7 +357,7 @@ export default function ProfilePage() {
                     value={formData.email}
                     onChange={handleChange}
                     className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3.5 pl-10 text-sm text-zinc-900 shadow-2xs transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-blue-400"
-                    placeholder="amr@example.com"
+                    placeholder="name@example.com"
                   />
                   <Mail className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
                 </div>
@@ -327,7 +380,7 @@ export default function ProfilePage() {
                     value={formData.phone}
                     onChange={handleChange}
                     className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3.5 pl-10 text-sm text-zinc-900 shadow-2xs transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-blue-400"
-                    placeholder="+1 (555) 234-5678"
+                    placeholder="+1 (555) 000-0000"
                   />
                   <Phone className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
                 </div>
@@ -350,7 +403,7 @@ export default function ProfilePage() {
                     value={formData.address}
                     onChange={handleChange}
                     className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3.5 pl-10 text-sm text-zinc-900 shadow-2xs transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-blue-400"
-                    placeholder="Street, City, State"
+                    placeholder="Street, City, State, Zip"
                   />
                   <MapPin className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
                 </div>
@@ -369,13 +422,102 @@ export default function ProfilePage() {
                       Provider Professional Details
                     </h2>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      Populates your public trade service card for client bookings.
+                      Populates your public trade service card for client
+                      bookings.
                     </p>
                   </div>
                 </div>
                 <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
                   Public Service Card
                 </span>
+              </div>
+
+              {/* Publication Status Card */}
+              <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3.5">
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${
+                        formData.isPublished
+                          ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400"
+                          : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                      }`}
+                    >
+                      {formData.isPublished ? (
+                        <Globe className="h-5 w-5" />
+                      ) : (
+                        <EyeOff className="h-5 w-5" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          Directory Visibility
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold transition ${
+                            formData.isPublished
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300"
+                              : "bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300"
+                          }`}
+                        >
+                          <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              formData.isPublished
+                                ? "bg-emerald-500 animate-pulse"
+                                : "bg-amber-500"
+                            }`}
+                          />
+                          <span>
+                            {formData.isPublished
+                              ? "Live in Directory"
+                              : "Hidden from Directory"}
+                          </span>
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        {formData.isPublished
+                          ? "Your technician card is publicly discoverable and customers can view your profile and book your services."
+                          : "Your profile is currently hidden from search results. Toggle on to start receiving client booking requests."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Toggle Controls */}
+                  <div className="flex items-center gap-3 self-end sm:self-center">
+                    <button
+                      type="button"
+                      onClick={handleTogglePublish}
+                      role="switch"
+                      aria-checked={Boolean(formData.isPublished)}
+                      aria-label="Toggle profile directory publication"
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                        formData.isPublished
+                          ? "bg-emerald-600"
+                          : "bg-zinc-300 dark:bg-zinc-700"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                          formData.isPublished
+                            ? "translate-x-5"
+                            : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleTogglePublish}
+                      className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition shadow-2xs ${
+                        formData.isPublished
+                          ? "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                          : "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                      }`}
+                    >
+                      {formData.isPublished ? "Unpublish" : "Publish Profile"}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-3">
@@ -395,11 +537,19 @@ export default function ProfilePage() {
                       onChange={handleChange}
                       className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3.5 text-sm text-zinc-900 shadow-2xs transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                     >
-                      <option value="Plumbing Services">Plumbing Services</option>
-                      <option value="Electrical & Wiring">Electrical & Wiring</option>
-                      <option value="AC & HVAC Maintenance">AC & HVAC Maintenance</option>
+                      <option value="Plumbing Services">
+                        Plumbing Services
+                      </option>
+                      <option value="Electrical & Wiring">
+                        Electrical & Wiring
+                      </option>
+                      <option value="AC & HVAC Maintenance">
+                        AC & HVAC Maintenance
+                      </option>
                       <option value="Appliance Repair">Appliance Repair</option>
-                      <option value="Deep Home Cleaning">Deep Home Cleaning</option>
+                      <option value="Deep Home Cleaning">
+                        Deep Home Cleaning
+                      </option>
                     </select>
                   </div>
                 </div>
@@ -479,7 +629,7 @@ export default function ProfilePage() {
               disabled={isSaving}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-md shadow-blue-500/20 transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
             >
-              <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
+              <span>{isSaving ? "Saving..." : "Save Changes"}</span>
             </button>
           </div>
         </form>

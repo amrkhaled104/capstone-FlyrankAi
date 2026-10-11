@@ -66,6 +66,7 @@ export const profileSchema = z.object({
   yearsOfExperience: z.string().trim().optional(),
   hourlyRate: z.string().trim().optional(),
   bio: z.string().trim().max(500, 'Bio must be under 500 characters').optional(),
+  isPublished: z.boolean().optional(),
 });
 
 export type ProfileFormData = z.infer<typeof profileSchema>;
@@ -81,6 +82,7 @@ export interface UserProfile {
   yearsOfExperience?: string | number;
   hourlyRate?: string;
   bio?: string;
+  isPublished?: boolean;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
