@@ -32,10 +32,10 @@ export default function ProfilePage() {
   const router = useRouter();
   const [role, setRole] = useState<UserRole>("customer");
   const [formData, setFormData] = useState<ProfileFormData>({
-    fullName: "Amr Khaled",
-    email: "amr@homeservices.ai",
-    phone: "+1 (555) 234-5678",
-    address: "742 Evergreen Terrace, Springfield",
+    fullName: "",
+    email: "",
+    phone: "",
+    address: "",
     role: "customer",
     profession: "",
     yearsOfExperience: "",
@@ -334,7 +334,7 @@ export default function ProfilePage() {
                     value={formData.fullName}
                     onChange={handleChange}
                     className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3.5 pl-10 text-sm text-zinc-900 shadow-2xs transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-blue-400"
-                    placeholder="Amr Khaled"
+                    placeholder="Your Full Name"
                   />
                   <User className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
                 </div>
@@ -357,7 +357,7 @@ export default function ProfilePage() {
                     value={formData.email}
                     onChange={handleChange}
                     className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3.5 pl-10 text-sm text-zinc-900 shadow-2xs transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-blue-400"
-                    placeholder="amr@example.com"
+                    placeholder="name@example.com"
                   />
                   <Mail className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
                 </div>
@@ -380,7 +380,7 @@ export default function ProfilePage() {
                     value={formData.phone}
                     onChange={handleChange}
                     className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3.5 pl-10 text-sm text-zinc-900 shadow-2xs transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-blue-400"
-                    placeholder="+1 (555) 234-5678"
+                    placeholder="+1 (555) 000-0000"
                   />
                   <Phone className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
                 </div>
@@ -403,7 +403,7 @@ export default function ProfilePage() {
                     value={formData.address}
                     onChange={handleChange}
                     className="h-10 w-full rounded-xl border border-zinc-300 bg-white px-3.5 pl-10 text-sm text-zinc-900 shadow-2xs transition focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-blue-400"
-                    placeholder="Street, City, State"
+                    placeholder="Street, City, State, Zip"
                   />
                   <MapPin className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
                 </div>

@@ -30,33 +30,22 @@ import { UserRole } from '@/lib/validators/auth.schema';
 import {
   CustomerBooking,
   ProviderRequest,
-  INITIAL_CUSTOMER_ACTIVE_BOOKINGS,
-  INITIAL_CUSTOMER_PAST_BOOKINGS,
-  INITIAL_PROVIDER_REQUESTS,
-  INITIAL_PROVIDER_COMPLETED_JOBS,
+  ProviderCompletedJob,
 } from '@/lib/dashboard.data';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [role, setRole] = useState<UserRole>('customer');
-  const [userName, setUserName] = useState<string>('Amr');
+  const [userName, setUserName] = useState<string>('User');
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isPublished, setIsPublished] = useState<boolean>(false);
   const [isTogglingPublish, setIsTogglingPublish] = useState<boolean>(false);
 
-  // Customer activity state
-  const [activeBookings, setActiveBookings] = useState<CustomerBooking[]>(
-    INITIAL_CUSTOMER_ACTIVE_BOOKINGS
-  );
-  const [pastBookings, setPastBookings] = useState<CustomerBooking[]>(
-    INITIAL_CUSTOMER_PAST_BOOKINGS
-  );
-
-  // Provider activity state
-  const [incomingRequests, setIncomingRequests] = useState<ProviderRequest[]>(
-    INITIAL_PROVIDER_REQUESTS
-  );
-  const [completedJobs] = useState(INITIAL_PROVIDER_COMPLETED_JOBS);
+  // Clean activity states initialized as empty arrays (ready for database integration)
+  const [activeBookings, setActiveBookings] = useState<CustomerBooking[]>([]);
+  const [pastBookings, setPastBookings] = useState<CustomerBooking[]>([]);
+  const [incomingRequests, setIncomingRequests] = useState<ProviderRequest[]>([]);
+  const [completedJobs] = useState<ProviderCompletedJob[]>([]);
 
   // Feedback notifications
   const [notification, setNotification] = useState<string | null>(null);
@@ -68,7 +57,11 @@ export default function DashboardPage() {
         setCurrentUser(user);
         if (user.displayName) {
           setUserName(user.displayName.split(' ')[0] || user.displayName);
+        } else if (user.email) {
+          const raw = user.email.split('@')[0];
+          setUserName(raw.charAt(0).toUpperCase() + raw.slice(1));
         }
+
         try {
           const docRef = doc(db, 'users', user.uid);
           const docSnap = await getDoc(docRef);
@@ -202,7 +195,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Dashboard Top Header (Clean, dynamic, no manual UI role tabs) */}
+        {/* Dashboard Top Header */}
         <div className="flex flex-col items-start justify-between gap-4 border-b border-zinc-200/80 pb-6 dark:border-zinc-800 sm:flex-row sm:items-center">
           <div>
             <div className="flex items-center gap-3">
@@ -299,7 +292,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Dynamic Metric Summary Cards (Strictly role-specific) */}
+        {/* Dynamic Metric Summary Cards */}
         <section aria-label="Activity Metrics" className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {!isProvider ? (
             <>
@@ -341,7 +334,7 @@ export default function DashboardPage() {
                     <DollarSign className="h-4 w-4" />
                   </div>
                 </div>
-                <p className="mt-3 text-2xl font-bold text-zinc-900 dark:text-zinc-100">$195.00</p>
+                <p className="mt-3 text-2xl font-bold text-zinc-900 dark:text-zinc-100">$0.00</p>
                 <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Across past repairs</p>
               </div>
 
@@ -357,7 +350,7 @@ export default function DashboardPage() {
                   {activeBookings.length > 0 ? `${activeBookings[0].scheduledDate}, ${activeBookings[0].scheduledTime}` : 'None'}
                 </p>
                 <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  {activeBookings.length > 0 ? activeBookings[0].category : 'Schedule anytime'}
+                  {activeBookings.length > 0 ? activeBookings[0].category : 'No upcoming appointments'}
                 </p>
               </div>
             </>
@@ -374,7 +367,9 @@ export default function DashboardPage() {
                 <p className="mt-3 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                   {incomingRequests.length}
                 </p>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Awaiting your approval</p>
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  {incomingRequests.length > 0 ? 'Awaiting your review' : 'No pending inquiries'}
+                </p>
               </div>
 
               {/* Provider Metric 2 */}
@@ -388,7 +383,7 @@ export default function DashboardPage() {
                 <p className="mt-3 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                   {completedJobs.length}
                 </p>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">100% on-time completion</p>
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Total jobs completed</p>
               </div>
 
               {/* Provider Metric 3 */}
@@ -399,7 +394,7 @@ export default function DashboardPage() {
                     <TrendingUp className="h-4 w-4" />
                   </div>
                 </div>
-                <p className="mt-3 text-2xl font-bold text-zinc-900 dark:text-zinc-100">$700.00</p>
+                <p className="mt-3 text-2xl font-bold text-zinc-900 dark:text-zinc-100">$0.00</p>
                 <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Disbursed to bank account</p>
               </div>
 
@@ -411,8 +406,8 @@ export default function DashboardPage() {
                     <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
                   </div>
                 </div>
-                <p className="mt-3 text-2xl font-bold text-zinc-900 dark:text-zinc-100">4.97 ★</p>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Based on 142 client reviews</p>
+                <p className="mt-3 text-2xl font-bold text-zinc-900 dark:text-zinc-100">—</p>
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">No client reviews yet</p>
               </div>
             </>
           )}
@@ -435,28 +430,21 @@ export default function DashboardPage() {
                   href="/services"
                   className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                 >
-                  <span>Book New Service</span>
+                  <span>Browse Services</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>
 
               <div className="mt-6 space-y-4">
                 {activeBookings.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-zinc-300 p-8 text-center dark:border-zinc-700">
+                  <div className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center dark:border-zinc-800">
                     <Inbox className="mx-auto h-8 w-8 text-zinc-400" />
                     <p className="mt-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                      No active bookings at the moment
+                      No bookings found
                     </p>
                     <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                      Browse verified local providers to book your next repair.
+                      Your scheduled service appointments will appear here.
                     </p>
-                    <Link
-                      href="/services"
-                      className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-                    >
-                      <span>Explore Services</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
                   </div>
                 ) : (
                   activeBookings.map((booking) => (
@@ -548,61 +536,73 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-6 space-y-3">
-                {pastBookings.map((booking) => (
-                  <article
-                    key={booking.id}
-                    className="flex flex-col justify-between gap-4 rounded-2xl border border-zinc-200/90 bg-white p-4.5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                            booking.status === 'completed'
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                              : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                          }`}
-                        >
-                          {booking.status === 'completed' ? 'Completed' : 'Cancelled'}
-                        </span>
-                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                          {booking.category}
-                        </span>
-                      </div>
+                {pastBookings.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center dark:border-zinc-800">
+                    <History className="mx-auto h-8 w-8 text-zinc-400" />
+                    <p className="mt-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      No past bookings found
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      Completed and cancelled service appointments will appear here.
+                    </p>
+                  </div>
+                ) : (
+                  pastBookings.map((booking) => (
+                    <article
+                      key={booking.id}
+                      className="flex flex-col justify-between gap-4 rounded-2xl border border-zinc-200/90 bg-white p-4.5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                              booking.status === 'completed'
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                            }`}
+                          >
+                            {booking.status === 'completed' ? 'Completed' : 'Cancelled'}
+                          </span>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {booking.category}
+                          </span>
+                        </div>
 
-                      <h3 className="mt-1 text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                        {booking.serviceTitle}
-                      </h3>
+                        <h3 className="mt-1 text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          {booking.serviceTitle}
+                        </h3>
 
-                      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                        Performed by <span className="font-medium text-zinc-700 dark:text-zinc-300">{booking.providerName}</span> on {booking.scheduledDate}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4 sm:justify-end">
-                      <div className="text-left sm:text-right">
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">Total Paid</p>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                          {booking.price}
+                        <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                          Performed by <span className="font-medium text-zinc-700 dark:text-zinc-300">{booking.providerName}</span> on {booking.scheduledDate}
                         </p>
                       </div>
 
-                      {booking.rating && (
-                        <div className="flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
-                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                          <span>{booking.rating.toFixed(1)}</span>
+                      <div className="flex items-center justify-between gap-4 sm:justify-end">
+                        <div className="text-left sm:text-right">
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">Total Paid</p>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                            {booking.price}
+                          </p>
                         </div>
-                      )}
 
-                      <Link
-                        href="/services"
-                        className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                      >
-                        <RotateCcw className="h-3 w-3" />
-                        <span>Book Again</span>
-                      </Link>
-                    </div>
-                  </article>
-                ))}
+                        {booking.rating && (
+                          <div className="flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                            <span>{booking.rating.toFixed(1)}</span>
+                          </div>
+                        )}
+
+                        <Link
+                          href="/services"
+                          className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 px-2.5 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          <span>Book Again</span>
+                        </Link>
+                      </div>
+                    </article>
+                  ))
+                )}
               </div>
             </section>
           </div>
@@ -625,13 +625,13 @@ export default function DashboardPage() {
 
               <div className="mt-6 space-y-4">
                 {incomingRequests.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-zinc-300 p-8 text-center dark:border-zinc-700">
-                    <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-500" />
+                  <div className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center dark:border-zinc-800">
+                    <Inbox className="mx-auto h-8 w-8 text-zinc-400" />
                     <p className="mt-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                      All caught up! No pending requests.
+                      No incoming requests found
                     </p>
                     <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                      New customer repair requests will appear here in real-time.
+                      New customer repair requests will appear here.
                     </p>
                   </div>
                 ) : (
@@ -738,48 +738,60 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-6 space-y-3">
-                {completedJobs.map((job) => (
-                  <article
-                    key={job.id}
-                    className="flex flex-col justify-between gap-4 rounded-2xl border border-zinc-200/90 bg-white p-4.5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                          Paid & Completed
-                        </span>
-                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                          {job.completedDate}
-                        </span>
-                      </div>
+                {completedJobs.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-zinc-200 p-8 text-center dark:border-zinc-800">
+                    <History className="mx-auto h-8 w-8 text-zinc-400" />
+                    <p className="mt-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      No completed jobs found
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                      Completed service jobs and client reviews will appear here.
+                    </p>
+                  </div>
+                ) : (
+                  completedJobs.map((job) => (
+                    <article
+                      key={job.id}
+                      className="flex flex-col justify-between gap-4 rounded-2xl border border-zinc-200/90 bg-white p-4.5 shadow-2xs dark:border-zinc-800 dark:bg-zinc-900 sm:flex-row sm:items-center"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                            Paid & Completed
+                          </span>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {job.completedDate}
+                          </span>
+                        </div>
 
-                      <h3 className="mt-1 text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                        {job.serviceTitle}
-                      </h3>
+                        <h3 className="mt-1 text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          {job.serviceTitle}
+                        </h3>
 
-                      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                        Client: <span className="font-medium text-zinc-700 dark:text-zinc-300">{job.customerName}</span>
-                        {job.review && (
-                          <span className="italic text-zinc-600 dark:text-zinc-400"> — &ldquo;{job.review}&rdquo;</span>
-                        )}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-4 sm:justify-end">
-                      <div className="text-left sm:text-right">
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">Disbursed Payout</p>
-                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                          {job.payout}
+                        <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                          Client: <span className="font-medium text-zinc-700 dark:text-zinc-300">{job.customerName}</span>
+                          {job.review && (
+                            <span className="italic text-zinc-600 dark:text-zinc-400"> — &ldquo;{job.review}&rdquo;</span>
+                          )}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
-                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                        <span>{job.rating.toFixed(1)}</span>
+                      <div className="flex items-center justify-between gap-4 sm:justify-end">
+                        <div className="text-left sm:text-right">
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">Disbursed Payout</p>
+                          <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                            {job.payout}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                          <span>{job.rating.toFixed(1)}</span>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  ))
+                )}
               </div>
             </section>
           </div>
